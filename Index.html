@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maravilhas de Cambará do Sul</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f0f0f0; margin: 0; }
+    header { background: #004080; color: #fff; padding: 20px; text-align: center; }
+    .container { display: flex; flex-wrap: wrap; justify-content: center; padding: 20px; }
+    .card { background: #fff; border-radius: 8px; margin: 10px; width: 300px; box-shadow: 0 2px 6px rgba(0,0,0,0.2); overflow: hidden; }
+    .card img { width: 100%; height: 180px; object-fit: cover; }
+    .card-content { padding: 15px; text-align: center; }
+    .card-content h3 { margin: 10px 0; color: #003366; }
+    .card-content button { background: #007bff; border: none; padding: 10px 20px; color: #fff; border-radius: 20px; cursor: pointer; }
+    .card-content button:disabled { background: #aaa; cursor: not-allowed; }
+
+    .admin-block { background: #fff; padding: 20px; text-align: center; border-top: 2px solid #ccc; }
+    .admin-block input[type="password"], .admin-block input[type="text"] { padding: 10px; width: 200px; margin: 5px; border-radius: 10px; border: 1px solid #ccc; }
+    .admin-block button { padding: 10px 20px; border: none; border-radius: 20px; background: #28a745; color: #fff; cursor: pointer; margin: 5px; }
+    .admin-panel { display: none; margin-top: 20px; }
+
+    #adsContainer { text-align: center; padding: 10px 0; background: #fff; display: none; }
+    footer { text-align: center; padding: 10px; font-size: 0.9em; color: #555; background: #fff; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Maravilhas de Cambará do Sul</h1>
+    <p>Vote na sua favorita!</p>
+  </header>
+
+  <div class="container" id="cards"></div>
+
+  <div class="admin-block">
+    <input type="password" id="adminCode" placeholder="Código de administrador" />
+    <button onclick="checkCode()">Entrar</button>
+    <div class="admin-panel" id="adminPanel">
+      <h3>Painel de Administração</h3>
+      <label><input type="checkbox" id="adsToggle" onchange="toggleAds()" /> Exibir anúncio</label>
+      <input type="text" id="adIDInput" placeholder="ID do anúncio (ca‑pub‑...)" />
+      <button onclick="saveAdID()">Atualizar anúncio</button>
+      <button onclick="resetVotes()">Resetar Votos</button>
+    </div>
+  </div>
+
+  <footer>
+    <div id="adsContainer">
+      <iframe id="adFrame" width="320" height="50" frameborder="0" scrolling="no" style="border:none;"></iframe>
+    </div>
+    <span class="version">Versão 0.4</span>
+  </footer>
+
+  <script>
+    const KEY = "123Bonds";
+    const maravilhas = [
+      { id: 'itaimbezinho', nome: 'Cânion Itaimbezinho', img: 'https://upload.wikimedia.org/wikipedia/commons/6/61/Canion_Itaimbezinho_-_Cambara_do_Sul_-_RS_-_panoramio.jpg' },
+      { id: 'fortaleza', nome: 'Cânion Fortaleza', img: 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Canion_Fortaleza_-_Cambara_do_Sul_-_RS.jpg' },
+      { id: 'venancios', nome: 'Cachoeira dos Venâncios', img: 'https://upload.wikimedia.org/wikipedia/commons/4/45/Cachoeira_dos_Ven%C3%A2ncios.jpg' },
+      { id: 'tigre', nome: 'Cachoeira do Tigre Preto', img: 'https://via.placeholder.com/300x180?text=Tigre+Preto' },
+      { id: 'riodoboi', nome: 'Trilha do Rio do Boi', img: 'https://via.placeholder.com/300x180?text=Rio+do+Boi' },
+      { id: 'malacara', nome: 'Cânion Malacara', img: 'https://via.placeholder.com/300x180?text=Malacara' },
+      { id: 'faxinal', nome: 'Serra do Faxinal', img: 'https://via.placeholder.com/300x180?text=Faxinal' }
+    ];
+
+    function initStorage() {
+      if (!localStorage.votos) localStorage.votos = JSON.stringify(Object.fromEntries(maravilhas.map(m=>[m.id,0])));
+      if (!localStorage.votadoUnico) localStorage.votadoUnico = "false";
+      if (!localStorage.adsEnabled) localStorage.adsEnabled = "false";
+      if (!localStorage.adClient) localStorage.adClient = "";
+    }
+
+    function renderCards() {
+      const votos = JSON.parse(localStorage.votos);
+      const votadoUnico = localStorage.votadoUnico === "true";
+      const cont = document.getElementById('cards'); cont.innerHTML = '';
+      maravilhas.forEach(m=>{
+        const disabled = votadoUnico ? 'disabled' : '';
+        cont.innerHTML +=
+          `<div class="card"><img src="${m.img}" alt="${m.nome}"><div class="card-content"><h3>${m.nome}</h3><p>${votos[m.id]} voto(s)</p><button onclick="vote('${m.id}')" ${disabled}>${disabled?'Voto registrado':'Votar'}</button></div></div>`;
+      });
+    }
+
+    function vote(id) {
+      if (localStorage.votadoUnico === "true") return;
+      let votos = JSON.parse(localStorage.votos);
+      votos[id]++;
+      localStorage.votos = JSON.stringify(votos);
+      localStorage.votadoUnico = "true";
+      renderCards();
+    }
+
+    function checkCode() {
+      if (document.getElementById('adminCode').value === KEY) {
+        document.getElementById('adminPanel').style.display = 'block';
+        document.getElementById('adsToggle').checked = (localStorage.adsEnabled === 'true');
+      } else alert('Senha incorreta');
+    }
+
+    function resetVotes() {
+      if (confirm('Resetar todos os votos?')) {
+        localStorage.votos = JSON.stringify(Object.fromEntries(maravilhas.map(m=>[m.id,0])));
+        localStorage.votadoUnico = "false";
+        renderCards();
+      }
+    }
+
+    function toggleAds() {
+      localStorage.adsEnabled = document.getElementById('adsToggle').checked;
+      updateAdDisplay();
+    }
+
+    function saveAdID() {
+      localStorage.adClient = document.getElementById('adIDInput').value.trim();
+      updateAdDisplay();
+    }
+
+    function updateAdDisplay() {
+      const on = (localStorage.adsEnabled === 'true'), id = localStorage.adClient;
+      const div = document.getElementById('adsContainer'), frame = document.getElementById('adFrame');
+      if (on && id) {
+        frame.src = `https://googleads.g.doubleclick.net/pagead/ads?client=${id}&slotname=8996594556&format=auto`;
+        div.style.display = 'block';
+      } else {
+        div.style.display = 'none';
+      }
+    }
+
+    initStorage(); renderCards(); updateAdDisplay();
+  </script>
+</body>
+</html>
